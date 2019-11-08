@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <context:property-placeholder location="classpath:jdbc.properties"></context:property-placeholder>
+    <!--配置包扫描-->
+    <context:component-scan base-package="com.bianyiit">
+        <!--设置不创建哪些对象-->
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--spring和mybatis的整合配置-->
+    <!--spring管理连接池-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"></property>
+        <property name="jdbcUrl" value="${jdbc.url}"></property>
+        <property name="user" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+    </bean>
+    <!--让spring管理mybatis的mapper-->
+    <bean  class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.bianyiit.dao"></property>
+    </bean>
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!--配置声明式事务-->
+    <!--1.配置事务管理器  mybatis   DataSourceTransactionManger-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!--2.配置通知-->
+    <tx:advice id="interceptor" transaction-manager="transactionManager">
+        <!--指定每个方法的事务类型-->
+        <tx:attributes>
+            <!--只读-->
+            <tx:method name="find*" propagation="SUPPORTS" read-only="true"/>
+            <!--事务控制-->
+            <tx:method name="*" propagation="REQUIRED" read-only="false"></tx:method>
+        </tx:attributes>
+    </tx:advice>
+
+    <!--3.配置aop-->
+    <aop:config>
+        <!--声明切点-->
+        <aop:pointcut id="pc" expression="execution(* com.bianyiit.service..*(..))"/>
+        <!--配置切面-->
+        <aop:advisor advice-ref="interceptor" pointcut-ref="pc"></aop:advisor>
+    </aop:config>
+</beans>
